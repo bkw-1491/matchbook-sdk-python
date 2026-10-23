@@ -124,6 +124,32 @@ def test_edit_offer_puts_to_the_offer_path():
         client.edit_offer(7)
 
 
+def test_submit_offers_returns_a_partly_failed_answer_sent_as_400():
+    """
+    Matchbook answers 400 when any offer fails but still places the rest, so the
+    offers come back rather than an error; a 400 without offers still raises.
+    """
+    client, _ = client_with(
+        (400, {"offers": [
+            {"temp-id": "bad", "status": "failed", "stake": 0.05, "errors": [{
+                "field": "stake",
+                "messages": ["0.05 is not a valid stake. Stake must be at least GBP0.1."],
+                "codes": ["OFFERS_SUBMIT_STAKE_INVALID_1"]}]},
+            {"id": "11", "temp-id": "ok", "status": "open", "stake": 0.1, "remaining": 0.1},
+        ]}),
+        (400, {"errors": [{"messages": ["Market is closed."]}]}),
+    )
+    result = client.submit_offers(
+        [OfferRequest(runner_id=5, side="back", odds=1000.0, stake=0.1, temp_id="ok"),
+         OfferRequest(runner_id=6, side="back", odds=1000.0, stake=0.05, temp_id="bad")])
+    failed, placed = result.offers
+    assert placed.id == 11 and placed.temp_id == "ok" and placed.status == "open"
+    assert failed.status == "failed" and failed.errors[0].codes == ["OFFERS_SUBMIT_STAKE_INVALID_1"]
+    assert result.latency_ms >= 0
+    with pytest.raises(MatchbookAPIError):
+        client.submit_offers([OfferRequest(runner_id=5, side="back", odds=2.0, stake=1)])
+
+
 def test_api_errors_carry_matchbooks_messages_and_codes():
     """
     Error bodies are flattened into messages, codes and fields.

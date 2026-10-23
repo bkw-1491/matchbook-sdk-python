@@ -46,6 +46,7 @@ client.cancel_offer(offer.id)
 # temp_id is your own reference, echoed back as Offer.temp_id (responses do not keep request order)
 offers = [OfferRequest(runner_id=r, side="lay", odds=1.5, stake=5, temp_id=f"ref-{r}") for r in runner_ids]
 for result in batch(client.submit_offers, offers, 10):    # 10 per call
+    # Matchbook sends a partly failed answer as HTTP 400; it is returned, not raised
     failed = [o for o in result.offers if o.status == "failed"]
 
 client.cancel_offers(market_ids=[market_id])    # no filters cancels everything

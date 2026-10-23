@@ -12,7 +12,7 @@ from matchbook.betting.resources import (
     PositionsResponse,
 )
 from matchbook.endpoints import Endpoints
-from matchbook.exceptions import MatchbookInvalidRequestError
+from matchbook.exceptions import MatchbookAPIError, MatchbookInvalidRequestError
 from matchbook.resources import (
     AggregationType,
     CancellationReason,
@@ -21,7 +21,7 @@ from matchbook.resources import (
     OfferStatus,
     Side,
 )
-from matchbook.utils import encode
+from matchbook.utils import decode, encode
 
 
 class BettingEndpoints(Endpoints):
@@ -39,23 +39,35 @@ class BettingEndpoints(Endpoints):
         """
         Submit offers: ``POST /edge/rest/v2/offers``.
 
-        Each offer succeeds or fails on its own; see ``OffersResponse``. In play,
-        an offer that would match comes back ``"delayed"`` and is matched or
-        failed once the delay passes.
+        Each offer succeeds or fails on its own; see ``OffersResponse``. Matchbook
+        answers HTTP 400 when any offer fails, yet still places the rest, so that
+        answer is returned like a 2xx one rather than raised. In play, an offer that
+        would match comes back ``"delayed"`` and is matched or failed once the delay
+        passes.
 
         :param offers: Offers to submit; see ``utils.batch`` to send many in chunks.
         :param odds_type: Format of every offer's ``odds``; the account's default if omitted.
         :param exchange_type: ``"back-lay"``; Matchbook no longer takes new binary offers.
-        :returns: One ``Offer`` per request.
+        :returns: One ``Offer`` per request, failed ones with ``errors``.
+        :raises MatchbookAPIError: On an error that carries no per-offer answer.
         """
         body = {
             "odds-type": odds_type,
             "exchange-type": exchange_type,
             "offers": encode(list(offers)),
         }
-        return self.conn.call(
-            OffersResponse, "POST", "/edge/rest/v2/offers",
-            json={k: v for k, v in body.items() if v is not None})
+        try:
+            return self.conn.call(
+                OffersResponse, "POST", "/edge/rest/v2/offers",
+                json={k: v for k, v in body.items() if v is not None})
+        except MatchbookAPIError as exc:
+            if exc.status_code != 400 or not isinstance(exc.body, dict) or "offers" not in exc.body:
+                raise
+            result = decode(OffersResponse, exc.body)
+            result.sent_at = exc.sent_at
+            result.received_at = exc.received_at
+            result.latency_ms = exc.latency_ms
+            return result
 
     def submit_offer(
         self,

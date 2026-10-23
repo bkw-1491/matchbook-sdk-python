@@ -168,7 +168,8 @@ class OffersResponse(PagedResponse):
     Offers submitted, edited, cancelled or fetched.
 
     On a submit, each offer succeeds or fails on its own: check each ``status``
-    (``"failed"`` with ``errors``).
+    (``"failed"`` with ``errors``). Matchbook sends that answer with HTTP 400 when
+    any offer failed; ``submit_offers`` returns it all the same.
     """
     language: str | None = None
     currency: str | None = None
