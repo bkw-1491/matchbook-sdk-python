@@ -15,12 +15,16 @@ class OfferRequest(BaseModel):
     :param stake: Amount staked.
     :param keep_in_play: Keep the unmatched part when the event goes in play;
         the API defaults to false.
+    :param temp_id: Your own reference for the offer, echoed as ``Offer.temp_id`` on the
+        submit, get and cancel responses. Undocumented by Matchbook; other unknown fields are
+        silently dropped.
     """
     runner_id: int
     side: Side
     odds: float
     stake: float
     keep_in_play: bool | None = None
+    temp_id: str | None = None
 
 
 @dataclass(kw_only=True, slots=True)

@@ -65,6 +65,7 @@ class BettingEndpoints(Endpoints):
         stake: float,
         *,
         keep_in_play: bool | None = None,
+        temp_id: str | None = None,
         odds_type: OddsType | None = None,
         exchange_type: ExchangeType | None = None,
     ) -> OffersResponse:
@@ -76,12 +77,14 @@ class BettingEndpoints(Endpoints):
         :param odds: In ``odds_type`` format.
         :param stake: Amount staked.
         :param keep_in_play: Keep the unmatched part when the event goes in play.
+        :param temp_id: Your own reference for the offer, echoed as ``Offer.temp_id``.
         :param odds_type: Format of ``odds``; the account's default if omitted.
         :param exchange_type: ``"back-lay"``.
         :returns: The offer, in ``offers[0]``.
         """
         offer = OfferRequest(
-            runner_id=runner_id, side=side, odds=odds, stake=stake, keep_in_play=keep_in_play)
+            runner_id=runner_id, side=side, odds=odds, stake=stake, keep_in_play=keep_in_play,
+            temp_id=temp_id)
         return self.submit_offers([offer], odds_type=odds_type, exchange_type=exchange_type)
 
     def edit_offers(self, edits: Sequence[OfferEditRequest]) -> OffersResponse:

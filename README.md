@@ -43,7 +43,8 @@ print(offer.status, offer.stake_matched, offer.remaining)
 client.edit_offer(offer.id, new_odds=2.6)
 client.cancel_offer(offer.id)
 
-offers = [OfferRequest(runner_id=r, side="lay", odds=1.5, stake=5) for r in runner_ids]
+# temp_id is your own reference, echoed back as Offer.temp_id (responses do not keep request order)
+offers = [OfferRequest(runner_id=r, side="lay", odds=1.5, stake=5, temp_id=f"ref-{r}") for r in runner_ids]
 for result in batch(client.submit_offers, offers, 10):    # 10 per call
     failed = [o for o in result.offers if o.status == "failed"]
 

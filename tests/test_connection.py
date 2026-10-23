@@ -88,19 +88,24 @@ def test_submit_offers_sends_kebab_case_and_decodes_each_offer():
     Offer requests are sent with kebab-case keys; string ids in the reply decode to ints.
     """
     client, http = client_with((200, {"offers": [
-        {"id": "11", "runner-id": 5, "status": "open", "stake": 2, "remaining": 2},
+        {"id": "11", "runner-id": 5, "status": "open", "stake": 2, "remaining": 2,
+         "temp-id": "ref-1"},
         {"status": "failed", "errors": [{"field": "odds", "messages": ["bad odds"]}]},
     ]}))
     result = client.submit_offers(
-        [OfferRequest(runner_id=5, side="back", odds=2.0, stake=2, keep_in_play=True)],
+        [OfferRequest(runner_id=5, side="back", odds=2.0, stake=2, keep_in_play=True,
+                      temp_id="ref-1"),
+         OfferRequest(runner_id=6, side="lay", odds=1.01, stake=2)],
         odds_type="DECIMAL")
     assert http.sent[0]["json"] == {
         "odds-type": "DECIMAL",
         "offers": [
-            {"runner-id": 5, "side": "back", "odds": 2.0, "stake": 2, "keep-in-play": True}],
+            {"runner-id": 5, "side": "back", "odds": 2.0, "stake": 2, "keep-in-play": True,
+             "temp-id": "ref-1"},
+            {"runner-id": 6, "side": "lay", "odds": 1.01, "stake": 2}],
     }
     placed, failed = result.offers
-    assert placed.id == 11 and placed.stake_matched == 0
+    assert placed.id == 11 and placed.stake_matched == 0 and placed.temp_id == "ref-1"
     assert failed.errors[0].field == "odds" and failed.errors[0].messages == ["bad odds"]
 
 
